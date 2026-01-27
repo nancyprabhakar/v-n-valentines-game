@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V+N valentines game 💋</title>
+  <!-- Place the character face PNG at assets/head.png for bobble-head style -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas" width="900" height="500"></canvas>
+
+    <!-- Intro: envelope screen (click to continue) -->
+    <div id="intro-screen">
+      <p id="intro-prompt">Click the envelope</p>
+    </div>
+
+    <!-- Start screen overlay -->
+    <div id="start-screen">
+      <h1 id="game-title">Run For Love ❤️</h1>
+      <p class="menu-hint">► Press SPACE to Start</p>
+      <p class="music-hint">Press M to toggle background music</p>
+    </div>
+
+    <!-- HUD: score, always visible when playing -->
+    <div id="hud">
+      <div id="score-display">Score: <span id="score-value">0</span></div>
+      <div id="time-display">Time: <span id="time-value">0</span>s</div>
+    </div>
+
+    <!-- Game over overlay -->
+    <div id="game-over-screen">
+      <h2>Game Over!</h2>
+      <p>Final Score: <span id="final-score">0</span></p>
+      <p class="menu-hint">Press SPACE to play again</p>
+    </div>
+
+    <!-- Win screen: edit the text below to change the birthday message -->
+    <div id="win-screen">
+      <h2>Happy Valentine's Day Vineet!</h2>
+      <p>You already won my heart.</p>
+      <p>Love you forever ❤️</p>
+      <p class="menu-hint">Press SPACE to play again</p>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

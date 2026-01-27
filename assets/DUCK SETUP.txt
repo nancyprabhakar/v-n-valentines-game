@@ -1,0 +1,6 @@
+To show the rubber duck obstacles, add these two images to this folder:
+
+  duck1.png  <- use the pink hat/bandana duck (ruth)
+  duck2.png  <- use the black hat/bandana duck (chris)
+
+Copy from your Cursor project assets and rename them as above.

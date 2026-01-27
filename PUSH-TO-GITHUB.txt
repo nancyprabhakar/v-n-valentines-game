@@ -1,0 +1,24 @@
+INSTRUCTIONS TO PUSH TO GITHUB:
+================================
+
+1. First, create a repository on GitHub:
+   - Go to: https://github.com/new
+   - Name: v-n-valentines-game
+   - Make it PUBLIC
+   - Click "Create repository"
+
+2. Then run these commands (replace YOUR_USERNAME with your GitHub username):
+
+   cd /Users/nancyprabhakar/BFG/Game
+   git remote add origin https://github.com/YOUR_USERNAME/v-n-valentines-game.git
+   git branch -M main
+   git push -u origin main
+
+3. Enable GitHub Pages:
+   - Go to: https://github.com/YOUR_USERNAME/v-n-valentines-game/settings/pages
+   - Source: Deploy from a branch
+   - Branch: main, folder: / (root)
+   - Click Save
+
+4. Your game will be live at:
+   https://YOUR_USERNAME.github.io/v-n-valentines-game/
