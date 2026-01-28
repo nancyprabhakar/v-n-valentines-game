@@ -27,7 +27,7 @@
   const PLAYER_WIDTH = 40;
   const PLAYER_HEIGHT = 56;
   const WIN_TIME_SEC = 40;
-  const BASE_SPEED = 6;
+  const BASE_SPEED = 4;
   const MAX_SPEED = 14;
   const SPEED_INCREASE_PER_SEC = 0.15;
 
