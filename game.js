@@ -58,6 +58,8 @@
   let winNancyReachedTime = -1;
   let winFireworks = [];
   let applausePlayed = false;
+  let lastObstacleSpawnTime = -1;
+  let lastCollectibleSpawnTime = -1;
 
   // Intro letter sequence: envelope | opening | letter
   let introPhase = "envelope";
@@ -1208,11 +1210,24 @@
     // Spawn obstacles (delay 1 second in Level 1)
     const gameElapsed = (Date.now() - gameStartTime) / 1000;
     const canSpawnObstacles = nightMode || level3Mode || gameElapsed >= 1.0;
-    if (canSpawnObstacles && (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 320)) {
-      if (Math.random() < 0.012) spawnObstacle();
+    const spacingOk = (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 260);
+    if (canSpawnObstacles && spacingOk) {
+      const sinceLast = lastObstacleSpawnTime < 0 ? 1e9 : (totalTime - lastObstacleSpawnTime);
+      // Gentle pacing: guarantee an obstacle about every ~1.4s if spacing allows
+      if (sinceLast > 1400 || Math.random() < 0.02) {
+        spawnObstacle();
+        lastObstacleSpawnTime = totalTime;
+      }
     }
-    if (collectibles.length === 0 || collectibles[collectibles.length - 1].x < canvas.width - 200) {
-      if (Math.random() < 0.015) spawnCollectible();
+    // Spawn collectibles (cups / cakes / rainbows) — start immediately in Level 1
+    const collectSpacingOk = (collectibles.length === 0 || collectibles[collectibles.length - 1].x < canvas.width - 140);
+    if (collectSpacingOk) {
+      const sinceLastC = lastCollectibleSpawnTime < 0 ? 1e9 : (totalTime - lastCollectibleSpawnTime);
+      // Keep it fun: guarantee about every ~1.1s, plus a slightly higher random chance
+      if (sinceLastC > 1100 || Math.random() < 0.03) {
+        spawnCollectible();
+        lastCollectibleSpawnTime = totalTime;
+      }
     }
 
     score = Math.floor(groundOffset / 30) + collectibleScore;
@@ -2282,6 +2297,8 @@
     freeHitRemaining = 1;
     batmanModeStartTime = -1;
     level3StartTime = -1;
+    lastObstacleSpawnTime = -1;
+    lastCollectibleSpawnTime = -1;
 
     startScreen.style.display = "none";
     gameOverScreen.style.display = "none";
