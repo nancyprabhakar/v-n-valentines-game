@@ -37,6 +37,7 @@
   let collectibleScore = 0;
   let cupsCollected = 0;
   let nightMode = false; // true after 3 coffee cups = night city + Batman
+  let level3Mode = false; // true after 11s in Batman mode = Seattle + original outfit
   let gameStartTime = 0;
   let speed = BASE_SPEED;
   let groundOffset = 0;
@@ -44,6 +45,7 @@
   let totalTime = 0; // for smooth time-based animations
   let freeHitRemaining = 1; // one obstacle hit allowed without game over
   let batmanModeStartTime = -1; // totalTime when Batman mode started (ms)
+  let level3StartTime = -1; // totalTime when Level 3 started (ms)
   let winAnimStartTime = 0;
   let winRunnerX = 0;
   let winHearts = [];
@@ -99,7 +101,15 @@
   const winningImage = new Image();
   winningImage.src = "assets/winning.png";
 
+  const dogImage = new Image();
+  dogImage.src = "assets/dog.png";
+
+  const rainbowImage = new Image();
+  rainbowImage.src = "assets/rainbow.png";
+
   let batmanBannerStart = -1;
+  let level3BannerStart = -1;
+  let level1BannerStart = -1;
 
   // Rubber duck obstacles (assets/duck1.png and assets/duck2.png)
   const duckImages = [new Image(), new Image()];
@@ -230,8 +240,27 @@
     src.stop(audioCtx.currentTime + duration);
   }
 
-  // --- Draw sky (sunset or night city) ---
+  // --- Draw sky (sunset, night city, or Seattle) ---
   function drawSky() {
+    if (level3Mode) {
+      // Overcast Seattle sky - muted grey
+      const gr = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gr.addColorStop(0, "#7d7d7d");
+      gr.addColorStop(0.4, "#8a8a8a");
+      gr.addColorStop(0.7, "#9a9a9a");
+      gr.addColorStop(1, "#a8a8a8");
+      ctx.fillStyle = gr;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Rain/snow effect - diagonal white streaks
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      for (let i = 0; i < 120; i++) {
+        const x = ((i * 47 + groundOffset * 0.3) % (canvas.width + 100)) - 50;
+        const y = ((i * 31 + totalTime * 0.2) % (canvas.height + 80)) - 40;
+        ctx.fillRect(x, y, 2, 8);
+      }
+      return;
+    }
     if (nightMode) {
       const gr = ctx.createLinearGradient(0, 0, 0, canvas.height);
       gr.addColorStop(0, "#0a0a1a");
@@ -320,6 +349,194 @@
         }
         x += b.w + 4;
       });
+    }
+  }
+
+  // --- Seattle skyline (Level 3) - pixel art style ---
+  function drawSeattleSkyline() {
+    const top = canvas.height - GROUND_H;
+    const stripWidth = 600;
+    const scroll = (groundOffset * 0.25) % stripWidth;
+    
+    // Draw distant mountains (background layer)
+    for (let strip = -1; strip * stripWidth - scroll < canvas.width + 200; strip++) {
+      const baseX = strip * stripWidth - scroll;
+      const mountainY = top - 180;
+      ctx.fillStyle = "#d0d0d0";
+      ctx.beginPath();
+      ctx.moveTo(baseX - 100, top);
+      ctx.lineTo(baseX + 50, mountainY);
+      ctx.lineTo(baseX + 150, mountainY - 20);
+      ctx.lineTo(baseX + 250, mountainY + 10);
+      ctx.lineTo(baseX + 350, mountainY - 15);
+      ctx.lineTo(baseX + 450, mountainY);
+      ctx.lineTo(baseX + 600, top);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Snow caps
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(baseX + 150, mountainY - 20);
+      ctx.lineTo(baseX + 180, mountainY - 35);
+      ctx.lineTo(baseX + 210, mountainY - 20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(baseX + 350, mountainY - 15);
+      ctx.lineTo(baseX + 380, mountainY - 30);
+      ctx.lineTo(baseX + 410, mountainY - 15);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    // Draw buildings (midground) - pixel art style with olive green
+    const buildings = [
+      { w: 42, h: 95, windows: 3, color: "#556b2f" },
+      { w: 58, h: 135, windows: 5, color: "#4a5d23" },
+      { w: 48, h: 115, windows: 4, color: "#556b2f" },
+      { w: 38, h: 85, windows: 3, color: "#4a5d23" },
+      { w: 52, h: 125, windows: 4, color: "#556b2f" },
+      { w: 45, h: 105, windows: 3, color: "#4a5d23" },
+    ];
+    
+    for (let strip = -1; strip * stripWidth - scroll < canvas.width + 100; strip++) {
+      let x = strip * stripWidth - scroll - 30;
+      buildings.forEach((b) => {
+        if (x < -b.w - 10 || x > canvas.width + 80) { x += b.w + 3; return; }
+        
+        // Building body - pixel art style
+        ctx.fillStyle = b.color;
+        ctx.fillRect(x, top - b.h, b.w, b.h);
+        ctx.strokeStyle = "#3d4e1f";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, top - b.h, b.w, b.h);
+        
+        // Windows - pixel style
+        const cellW = Math.floor(b.w / (b.windows + 1));
+        const cellH = Math.floor(b.h / 8);
+        ctx.fillStyle = "#ffffff";
+        for (let row = 0; row < 7; row++) {
+          for (let col = 0; col < b.windows; col++) {
+            if ((row * 7 + col * 11 + b.h) % 3 !== 0) {
+              const lx = Math.floor(x + (col + 1) * cellW);
+              const ly = Math.floor(top - b.h + row * cellH);
+              ctx.fillRect(lx, ly, Math.floor(cellW * 0.6), Math.floor(cellH * 0.7));
+            }
+          }
+        }
+        x += b.w + 3;
+      });
+      
+      // Draw Space Needle (left side, more prominent and recognizable)
+      const spaceNeedleX = x - 400;
+      if (spaceNeedleX > -100 && spaceNeedleX < canvas.width + 100) {
+        const baseY = top;
+        const deckY = top - 200;
+        const topY = top - 250;
+        
+        // Base tripod legs (three legs spreading out)
+        ctx.fillStyle = "#556b2f";
+        ctx.strokeStyle = "#3d4e1f";
+        ctx.lineWidth = 2;
+        
+        // Left leg
+        ctx.beginPath();
+        ctx.moveTo(spaceNeedleX - 15, baseY);
+        ctx.lineTo(spaceNeedleX - 35, baseY - 15);
+        ctx.lineTo(spaceNeedleX - 30, baseY - 15);
+        ctx.lineTo(spaceNeedleX - 12, baseY - 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Right leg
+        ctx.beginPath();
+        ctx.moveTo(spaceNeedleX + 15, baseY);
+        ctx.lineTo(spaceNeedleX + 35, baseY - 15);
+        ctx.lineTo(spaceNeedleX + 30, baseY - 15);
+        ctx.lineTo(spaceNeedleX + 12, baseY - 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Center/back leg
+        ctx.beginPath();
+        ctx.moveTo(spaceNeedleX, baseY);
+        ctx.lineTo(spaceNeedleX, baseY - 20);
+        ctx.lineTo(spaceNeedleX - 3, baseY - 20);
+        ctx.lineTo(spaceNeedleX - 3, baseY - 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Main tower - narrow, tapering upward
+        ctx.fillStyle = "#556b2f";
+        ctx.strokeStyle = "#3d4e1f";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(spaceNeedleX - 8, baseY - 20);
+        ctx.lineTo(spaceNeedleX - 6, deckY + 25);
+        ctx.lineTo(spaceNeedleX + 6, deckY + 25);
+        ctx.lineTo(spaceNeedleX + 8, baseY - 20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Observation deck - distinctive flying saucer shape
+        const deckRadius = 28;
+        const deckThickness = 8;
+        
+        // Top of saucer
+        ctx.fillStyle = "#6b7d3f";
+        ctx.beginPath();
+        ctx.ellipse(spaceNeedleX, deckY, deckRadius, deckThickness, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#3d4e1f";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Bottom of saucer
+        ctx.fillStyle = "#556b2f";
+        ctx.beginPath();
+        ctx.ellipse(spaceNeedleX, deckY + deckThickness, deckRadius, deckThickness * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Windows on observation deck
+        ctx.fillStyle = "#ffffff";
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const wx = spaceNeedleX + Math.cos(angle) * (deckRadius * 0.7);
+          const wy = deckY + Math.sin(angle) * 3;
+          ctx.fillRect(wx - 2, wy - 1, 4, 2);
+        }
+        
+        // Narrow section above deck
+        ctx.fillStyle = "#556b2f";
+        ctx.beginPath();
+        ctx.moveTo(spaceNeedleX - 4, deckY - deckThickness);
+        ctx.lineTo(spaceNeedleX - 3, deckY - 35);
+        ctx.lineTo(spaceNeedleX + 3, deckY - 35);
+        ctx.lineTo(spaceNeedleX + 4, deckY - deckThickness);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Top spire - very thin, pointed
+        ctx.fillStyle = "#3d4e1f";
+        ctx.beginPath();
+        ctx.moveTo(spaceNeedleX, deckY - 35);
+        ctx.lineTo(spaceNeedleX - 2, topY);
+        ctx.lineTo(spaceNeedleX + 2, topY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Top antenna
+        ctx.fillStyle = "#2d3e0f";
+        ctx.fillRect(spaceNeedleX - 1, topY - 20, 2, 20);
+      }
     }
   }
 
@@ -508,7 +725,7 @@
     ctx.translate(0, (1 - stretchY) * -20);
 
     // Cape (Batman mode only) – behind character, blowing in wind
-    if (nightMode) {
+    if (nightMode && !level3Mode) {
       const wind = totalTime * 0.004;
       ctx.save();
       ctx.translate(22, 22);
@@ -551,7 +768,7 @@
     }
 
     // Body: red t-shirt or Batman suit (high contrast in night mode)
-    if (nightMode) {
+    if (nightMode && !level3Mode) {
       ctx.fillStyle = "#2d2d35";
       ctx.strokeStyle = "#5a5a65";
       ctx.lineWidth = 1.5;
@@ -582,7 +799,7 @@
     }
 
     // Arms (smooth pump)
-    if (nightMode) {
+    if (nightMode && !level3Mode) {
       ctx.fillStyle = "#2d2d35";
       ctx.strokeStyle = "#4a4a55";
       ctx.lineWidth = 1;
@@ -610,7 +827,7 @@
     ctx.scale(wobbleScale, wobbleScale);
     ctx.translate(-headCx, -headCy);
 
-    const headImg = nightMode ? batmanHeadImage : headImage;
+    const headImg = level3Mode ? headImage : (nightMode ? batmanHeadImage : headImage);
     if (headImg && headImg.complete && headImg.naturalWidth > 0) {
       ctx.beginPath();
       ctx.arc(headCx, headCy, headR, 0, Math.PI * 2);
@@ -625,8 +842,8 @@
         headR * 2.15
       );
       ctx.restore();
-      ctx.strokeStyle = nightMode ? "rgba(90,90,100,0.6)" : "rgba(0,0,0,0.2)";
-      ctx.lineWidth = nightMode ? 2.5 : 2;
+      ctx.strokeStyle = (nightMode && !level3Mode) ? "rgba(90,90,100,0.6)" : "rgba(0,0,0,0.2)";
+      ctx.lineWidth = (nightMode && !level3Mode) ? 2.5 : 2;
       ctx.beginPath();
       ctx.arc(headCx, headCy, headR, 0, Math.PI * 2);
       ctx.stroke();
@@ -668,7 +885,24 @@
 
   function drawObstacles() {
     obstacles.forEach((o) => {
-      if (nightMode) {
+      if (level3Mode) {
+        // --- Dog image (Level 3) ---
+        const DOG_W = 50;
+        const DOG_H = 50;
+        const dx = o.x - (DOG_W - o.w) / 2;
+        const dy = o.y + o.h - DOG_H;
+        if (dogImage.complete && dogImage.naturalWidth > 0) {
+          ctx.save();
+          ctx.shadowColor = "rgba(0,0,0,0.25)";
+          ctx.shadowBlur = 6;
+          ctx.shadowOffsetY = 3;
+          ctx.drawImage(dogImage, dx, dy, DOG_W, DOG_H);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = "#8d6e63";
+          ctx.fillRect(o.x, o.y, o.w, o.h);
+        }
+      } else if (nightMode) {
         const dx = o.x - (TURTLE_W - o.w) / 2;
         const dy = o.y + o.h - TURTLE_H;
         if (turtleImage.complete && turtleImage.naturalWidth > 0) {
@@ -752,7 +986,18 @@
       ctx.translate(cx, cy);
       ctx.scale(pulse, pulse);
 
-      if (nightMode) {
+      if (level3Mode) {
+        // --- Rainbow image (Level 3) ---
+        const rainbowSize = 50;
+        if (rainbowImage.complete && rainbowImage.naturalWidth > 0) {
+          ctx.drawImage(rainbowImage, -rainbowSize / 2, -rainbowSize / 2, rainbowSize, rainbowSize);
+        } else {
+          ctx.fillStyle = "#ff6b6b";
+          ctx.beginPath();
+          ctx.arc(0, 0, 20, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (nightMode) {
         // --- Birthday cake image (Batman mode) ---
         const cakeSize = 62;
         if (cakeImage.complete && cakeImage.naturalWidth > 0) {
@@ -897,6 +1142,13 @@
     const t = (Date.now() - gameStartTime) / 1000;
     speed = BASE_SPEED;
 
+    // Level 1 -> Level 2 (Batman) after 11 seconds, regardless of cups
+    if (!nightMode && !level3Mode && t >= 11) {
+      nightMode = true;
+      if (batmanBannerStart < 0) batmanBannerStart = totalTime;
+      if (batmanModeStartTime < 0) batmanModeStartTime = totalTime;
+    }
+
     groundOffset += speed * (dt / 16);
     player.frameTimer += dt;
     if (player.frameTimer > 80) {
@@ -944,11 +1196,6 @@
       if (circleRect(player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT / 2, 22, c.x, c.y, c.r * 2, c.r * 2)) {
         collectibleScore += 10;
         cupsCollected += 1;
-        if (cupsCollected >= 3) {
-          nightMode = true;
-          if (batmanBannerStart < 0) batmanBannerStart = totalTime;
-          if (batmanModeStartTime < 0) batmanModeStartTime = totalTime;
-        }
         spawnCollectParticles(c.x + c.r, c.y + c.r);
         playCollectSound();
         return false;
@@ -958,8 +1205,10 @@
 
     drawParticles(dt);
 
-    // Spawn
-    if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 320) {
+    // Spawn obstacles (delay 1 second in Level 1)
+    const gameElapsed = (Date.now() - gameStartTime) / 1000;
+    const canSpawnObstacles = nightMode || level3Mode || gameElapsed >= 1.0;
+    if (canSpawnObstacles && (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 320)) {
       if (Math.random() < 0.012) spawnObstacle();
     }
     if (collectibles.length === 0 || collectibles[collectibles.length - 1].x < canvas.width - 200) {
@@ -970,14 +1219,23 @@
     scoreEl.textContent = score;
     timeEl.textContent = Math.min(Math.floor(t), WIN_TIME_SEC);
 
-    // Win: 40s normally, or 11s in Batman mode
+    // Win: 40s normally, or 11s in Level 3
     const batmanTime = batmanModeStartTime >= 0 ? (totalTime - batmanModeStartTime) / 1000 : 0;
-    const winTime = nightMode ? 11 : WIN_TIME_SEC;
-    const hasWon = nightMode ? (batmanTime >= 11) : (t >= WIN_TIME_SEC);
+    const level3Time = level3StartTime >= 0 ? (totalTime - level3StartTime) / 1000 : 0;
+    
+    // Transition from Batman mode to Level 3 after 11 seconds
+    if (nightMode && !level3Mode && batmanTime >= 11) {
+      level3Mode = true;
+      level3StartTime = totalTime;
+      level3BannerStart = totalTime;
+    }
+    
+    // Win after 7 seconds in Level 3
+    const hasWon = level3Mode ? (level3Time >= 7) : (nightMode ? false : (t >= WIN_TIME_SEC));
     if (hasWon) {
       stopBGM();
       hud.classList.remove("visible");
-      if (nightMode) {
+      if (level3Mode) {
         state = "winAnim";
         winAnimStartTime = totalTime;
         winRunnerX = player.x;
@@ -996,7 +1254,7 @@
 
   // --- Batman mode banner (Level 2) ---
   function drawBatmanBanner() {
-    if (batmanBannerStart < 0 || !nightMode) return;
+    if (batmanBannerStart < 0 || !nightMode || level3Mode) return;
     const elapsed = totalTime - batmanBannerStart;
     if (elapsed > 8000) return;
     const slideDur = 700;
@@ -1030,6 +1288,90 @@
     ctx.restore();
     ctx.textAlign = "center";
     ctx.fillStyle = "#ffeb3b";
+    ctx.globalAlpha = alpha;
+    ctx.fillText(bannerText, canvas.width / 2, y + bh / 2 + 8);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "left";
+  }
+
+  // --- Level 1 banner (Press SPACE BAR to Jump!) ---
+  function drawLevel1Banner() {
+    if (level1BannerStart < 0 || nightMode || level3Mode) return;
+    const elapsed = totalTime - level1BannerStart;
+    if (elapsed > 5000) return;
+    const slideDur = 600;
+    let y = 50;
+    let alpha = 1;
+    if (elapsed < slideDur) {
+      y = -60 + (110 * elapsed / slideDur);
+    } else if (elapsed > 4000) {
+      alpha = 1 - (elapsed - 4000) / 1000;
+    }
+    const bannerText = "Press SPACE BAR to Jump!";
+    ctx.font = "bold 22px 'Courier New', monospace";
+    const textWidth = ctx.measureText(bannerText).width;
+    const paddingX = 56;
+    const paddingY = 20;
+    const bw = Math.ceil(textWidth) + paddingX * 2;
+    const bh = 56 + paddingY;
+    const bx = (canvas.width - bw) / 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = "#e53935";
+    roundRect(ctx, bx, y, bw, bh, 8);
+    ctx.fill();
+    ctx.strokeStyle = "#ff6b6b";
+    ctx.lineWidth = 3;
+    roundRect(ctx, bx, y, bw, bh, 8);
+    ctx.stroke();
+    ctx.restore();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.globalAlpha = alpha;
+    ctx.fillText(bannerText, canvas.width / 2, y + bh / 2 + 8);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "left";
+  }
+
+  // --- Level 3 banner (Kulfi round) ---
+  function drawLevel3Banner() {
+    if (level3BannerStart < 0 || !level3Mode) return;
+    const elapsed = totalTime - level3BannerStart;
+    if (elapsed > 8000) return;
+    const slideDur = 700;
+    let y = 50;
+    let alpha = 1;
+    if (elapsed < slideDur) {
+      y = -60 + (110 * elapsed / slideDur);
+    } else if (elapsed > 6000) {
+      alpha = 1 - (elapsed - 6000) / 2000;
+    }
+    const bannerText = "Level 3: Seattle round!";
+    ctx.font = "bold 22px 'Courier New', monospace";
+    const textWidth = ctx.measureText(bannerText).width;
+    const paddingX = 56;
+    const paddingY = 20;
+    const bw = Math.ceil(textWidth) + paddingX * 2;
+    const bh = 56 + paddingY;
+    const bx = (canvas.width - bw) / 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = "#283593";
+    roundRect(ctx, bx, y, bw, bh, 8);
+    ctx.fill();
+    ctx.strokeStyle = "#5c6bc0";
+    ctx.lineWidth = 3;
+    roundRect(ctx, bx, y, bw, bh, 8);
+    ctx.stroke();
+    ctx.restore();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
     ctx.globalAlpha = alpha;
     ctx.fillText(bannerText, canvas.width / 2, y + bh / 2 + 8);
     ctx.globalAlpha = 1;
@@ -1175,27 +1517,33 @@
       ctx.textAlign = "left";
       ctx.save();
       ctx.translate(winRunnerX, GROUND_Y - PLAYER_HEIGHT);
-      if (batmanHeadImage.complete && batmanHeadImage.naturalWidth > 0) {
-        const headR = 20;
+      // Use Level 1 character (head.png and red t-shirt)
+      const headR = 20;
+      if (headImage.complete && headImage.naturalWidth > 0) {
         ctx.beginPath();
         ctx.arc(21, 16, headR, 0, Math.PI * 2);
         ctx.closePath();
         ctx.save();
         ctx.clip();
-        ctx.drawImage(batmanHeadImage, 21 - headR, 16 - headR - 2, headR * 2, headR * 2.1);
+        ctx.drawImage(headImage, 21 - headR, 16 - headR - 2, headR * 2, headR * 2.1);
         ctx.restore();
+      } else {
+        ctx.fillStyle = "#ffcc80";
+        ctx.beginPath();
+        ctx.arc(21, 16, headR, 0, Math.PI * 2);
+        ctx.fill();
       }
-      ctx.fillStyle = "#2d2d35";
+      // Red t-shirt (Level 1 outfit)
+      const bodyGr = ctx.createLinearGradient(8, 20, 34, 48);
+      bodyGr.addColorStop(0, "#ef5350");
+      bodyGr.addColorStop(0.5, "#e53935");
+      bodyGr.addColorStop(1, "#c62828");
+      ctx.fillStyle = bodyGr;
       ctx.fillRect(8, 20, 26, 28);
-      ctx.fillStyle = "#f9a825";
-      ctx.beginPath();
-      ctx.moveTo(21, 28);
-      ctx.lineTo(18, 42);
-      ctx.lineTo(21, 38);
-      ctx.lineTo(24, 42);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#2d2d35";
+      ctx.fillStyle = "rgba(255,255,255,0.12)";
+      ctx.fillRect(10, 22, 6, 12);
+      // Legs
+      ctx.fillStyle = "#37474f";
       ctx.fillRect(10, 44, 8, 14);
       ctx.fillRect(24, 44, 8, 14);
       ctx.restore();
@@ -1699,9 +2047,9 @@
     const letterDur = LETTER_SLIDE_MS;
     const letterT = Math.min(1, (t - letterStart) / letterDur);
     const easeOut = 1 - Math.pow(1 - letterT, 1.4);
-    const paperH = 280;
-    const paperW = 380;
-    const paperFinalY = ch * 0.45 - paperH / 2;
+    const paperH = 340;
+    const paperW = 420;
+    const paperFinalY = ch * 0.42 - paperH / 2;
     const paperY = letterT <= 0 ? ch + 50 : paperFinalY + (1 - easeOut) * (ch + 50 - paperFinalY);
 
     const bottomPaper = letterT > 0 ? paperY + paperH : ch;
@@ -1729,28 +2077,61 @@
       const left = paperX + 28;
       let lineY = paperY + 78;
       const lineH = 24;
+      const maxTextW = paperW - 56; // left+right padding
       const lines = [
-        "Welcome to the Valentine's Marathon.",
+        "Welcome to the 🏁 Valentine's Marathon 🏁",
         "",
-        "Your mission: run fast and dodge obstacles.",
-        "Cappachinos make you stronger ☕💪",
+        "Your mission:",
+        "__BULLET__Run fast",
+        "__BULLET__Jump over obstacles by pressing the SPACE-BAR\u00A0⬆️",
+        "__BULLET__Collect cappachinos to earn points! ☕️",
         "I'm waiting for you at the finish line.",
         "",
-        "PS: you already make my heart race.",
+        "PS: You already make my heart race.",
+        "",
         "xoxo",
-        "Nancy 💋"
+        "Nancy💋"
       ];
-      lines.forEach((line) => {
-        ctx.fillText(line, left, lineY);
-        lineY += line ? lineH : 14;
-      });
+      function drawWrappedLine(text) {
+        if (!text) {
+          lineY += 14;
+          return;
+        }
+        const isBullet = text.startsWith("__BULLET__");
+        const cleanText = isBullet ? text.replace("__BULLET__", "") : text;
+        const textX = isBullet ? left + 18 : left;
+        const availableW = isBullet ? (maxTextW - 18) : maxTextW;
+
+        if (isBullet) {
+          // Pink heart bullet
+          drawSmallHeart(ctx, left + 6, lineY - 6, 1.15, 1);
+        }
+
+        const words = cleanText.split(" ");
+        let cur = "";
+        for (let i = 0; i < words.length; i++) {
+          const next = cur ? `${cur} ${words[i]}` : words[i];
+          if (ctx.measureText(next).width > availableW && cur) {
+            ctx.fillText(cur, textX, lineY);
+            lineY += lineH;
+            cur = words[i];
+          } else {
+            cur = next;
+          }
+        }
+        if (cur) {
+          ctx.fillText(cur, textX, lineY);
+          lineY += lineH;
+        }
+      }
+      lines.forEach(drawWrappedLine);
       ctx.restore();
     }
 
     if (introPhase === "letter") {
       const letterPhaseTime = t - OPENING_TO_LETTER_MS;
-      const promptY = bottomPaper + 32;
-      const buttonY = bottomPaper + 58;
+      const promptY = bottomPaper + 40;
+      const buttonY = bottomPaper + 60;
       if (letterPhaseTime > 600) {
         ctx.fillStyle = "#fff";
         ctx.font = "bold 20px sans-serif";
@@ -1775,7 +2156,8 @@
     const bw = 220;
     const bh = 48;
     const bx = cw / 2 - bw / 2;
-    const by = buttonY != null ? buttonY : ch - 75;
+    const byRaw = buttonY != null ? buttonY : ch - 75;
+    const by = Math.min(byRaw, ch - bh - 20); // leave ~0.5cm pink space under button
     const hover = introLetterButtonHover;
     ctx.save();
     ctx.fillStyle = hover ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.88)";
@@ -1818,8 +2200,11 @@
       return;
     }
     drawSky();
-    if (nightMode) drawCitySkyline();
-    if (nightMode) drawBatmanBanner();
+    if (level3Mode) drawSeattleSkyline();
+    if (nightMode && !level3Mode) drawCitySkyline();
+    if (!nightMode && !level3Mode) drawLevel1Banner();
+    if (nightMode && !level3Mode) drawBatmanBanner();
+    if (level3Mode) drawLevel3Banner();
     drawClouds();
     drawGround();
     drawTrees();
@@ -1880,7 +2265,10 @@
     collectibleScore = 0;
     cupsCollected = 0;
     nightMode = false;
+    level3Mode = false;
     batmanBannerStart = -1;
+    level3BannerStart = -1;
+    level1BannerStart = totalTime;
     gameStartTime = Date.now();
     speed = BASE_SPEED;
     groundOffset = 0;
@@ -1893,6 +2281,7 @@
     particles = [];
     freeHitRemaining = 1;
     batmanModeStartTime = -1;
+    level3StartTime = -1;
 
     startScreen.style.display = "none";
     gameOverScreen.style.display = "none";
